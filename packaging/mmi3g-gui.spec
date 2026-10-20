@@ -29,6 +29,8 @@ a = Analysis(
         (os.path.join(REPO_ROOT, "core"), "core"),
         (os.path.join(REPO_ROOT, "tools"), "tools"),
         (os.path.join(REPO_ROOT, "builder", "generate_manifest.py"), "builder"),
+        # App icon (dino), loaded at runtime for the window + splash.
+        (os.path.join(REPO_ROOT, "assets"), "assets"),
     ],
     hiddenimports=["build_sd", "encoder", "version"],
     hookspath=[],
@@ -48,6 +50,7 @@ exe = EXE(
     a.datas,
     [],
     name="MMI3G-Toolkit-Builder",
+    icon=os.path.join(REPO_ROOT, "assets", "icon.ico"),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

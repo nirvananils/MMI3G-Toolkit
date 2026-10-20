@@ -62,6 +62,10 @@ REPO_ROOT = os.path.dirname(SCRIPT_DIR)
 # the repository root. Used to locate the firmware tools at runtime.
 DATA_BASE = getattr(sys, "_MEIPASS", REPO_ROOT) if FROZEN else REPO_ROOT
 
+ASSETS_DIR = os.path.join(DATA_BASE, "assets")
+ICON_ICO = os.path.join(ASSETS_DIR, "icon.ico")
+ICON_PNG = os.path.join(ASSETS_DIR, "icon.png")
+
 SPLASH_W, SPLASH_H = 800, 480
 
 # Short German one-line descriptions per firmware tool. Shown above the tool's
@@ -97,6 +101,178 @@ TOOL_BLURBS = {
     "tools/walk_f3s_efs.py": "Listet/extrahiert den Inhalt eines F3S-EFS-Images.",
     "builder/generate_manifest.py": "Erzeugt docs/app/manifest.json aus dem "
                                     "modules/-Baum (für die Web-App).",
+}
+
+# Schritt-für-Schritt-Anleitung je Firmware-Werkzeug. Wird im eigenen
+# Anleitungs-Fenster unter Kurzbeschreibung + Original-Hinweisen angezeigt.
+# Keyed wie TOOL_BLURBS ("tools/<file>.py").
+TOOL_HELP = {
+    "tools/build_ifs.py":
+        "Baut aus einem extrahierten Dateibaum wieder ein (dekomprimiertes) "
+        "QNX-IFS.\n\n"
+        "1. Vorher mit inflate_ifs.py --extract einen Baum erzeugen.\n"
+        "2. Dateien im Baum ändern/hinzufügen/löschen.\n"
+        "3. Argumente setzen: --reference <orig_decomp.ifs> --tree <baum/> "
+        "--output <neu_decomp.ifs>\n"
+        "4. Danach mit repack_ifs.py komprimieren und mu_crc_patcher.py die "
+        "CRCs neu rechnen.\n\n"
+        "Die Referenz-IFS liefert den Boot-/Startup-Teil, der nicht neu "
+        "erzeugt werden kann.",
+    "tools/eol_modifier.py":
+        "Zeigt und ändert EOL-Feature-Flags in lsd.jxe (z. B. Google Earth "
+        "freischalten).\n\n"
+        "Ansehen:\n"
+        "  <lsd.jxe> --list                (Master-EOL-Flags)\n"
+        "  <lsd.jxe> --show-variant        (aktive Varianten-Overlays)\n"
+        "  <lsd.jxe> --list-variants       (verfügbare Varianten-Bundles)\n\n"
+        "Ändern:\n"
+        "  <lsd.jxe> --output modified_lsd.jxe --enable EOLFLAG_GOOGLE_EARTH\n\n"
+        "Danach mit patch_ifs.py --replace lsd/lsd.jxe=modified_lsd.jxe ins "
+        "IFS zurückschreiben.\n\n"
+        "WARNUNG: Nur Features aktivieren, die das Fahrzeug wirklich hat - "
+        "sonst Fehlermeldungen/Instabilität.",
+    "tools/extract_f3s_efs.py":
+        "Extrahiert Dateien aus einem unkomprimierten MMI3G-EFS-Image "
+        "(efs-system.efs, Varianten 41/51).\n\n"
+        "1. --list zum Ansehen des Inhalts.\n"
+        "2. <image> <ausgabeordner> extrahiert alles.\n"
+        "3. --only <text> beschränkt auf passende Pfade.\n\n"
+        "Variante 61 ist komprimiert und wird hier NICHT unterstützt.",
+    "tools/extract_jars_from_efs.py":
+        "Zieht eingebettete JAR-Dateien (dsi.jar, osgi.jar, lsd.jxe u. a.) "
+        "aus einem rohen efs-system.efs.\n\n"
+        "Aufruf: <efs-system.efs> <ausgabeordner>\n\n"
+        "Sucht ZIP-Signaturen im Image. Erwartet ~15-25 Dateien.",
+    "tools/extract_qnx_ifs.py":
+        "Extrahiert Dateien aus einem bereits dekomprimierten QNX-IFS "
+        "(.ifs).\n\n"
+        "1. --list listet nur auf.\n"
+        "2. <image> <ausgabeordner> extrahiert mit Pfadstruktur.\n"
+        "3. --only <text> filtert nach Pfad.\n\n"
+        "Hinweis: Komprimierte IFS zuerst mit inflate_ifs.py entpacken.",
+    "tools/gemmi_tile_proxy.py":
+        "Lokaler GEMMI-Kachel-Proxy (eigener dbRoot) für Google-Earth-"
+        "Analyse.\n\n"
+        "Langläufiger Server - startet und bleibt offen. Mit Stop (bzw. "
+        "Ctrl-C) beenden.\n\n"
+        "Braucht dbRoot_custom.bin und auth_resp*.bin im tools/-Ordner.",
+    "tools/inflate_ifs.py":
+        "Dekomprimiert ein komprimiertes QNX-IFS (ifs-root.ifs) und "
+        "extrahiert optional.\n\n"
+        "Nur entpacken:  <ifs-root.ifs> -o ifs-root.decomp\n"
+        "Entpacken + extrahieren:  <ifs-root.ifs> --extract outdir/\n\n"
+        "Braucht gcc + libucl; ohne diese --container nutzen (podman/docker) "
+        "oder das automatische Fallback.",
+    "tools/inflate_qnx.py":
+        "Entpackt einzelne QNX-'iwlyfmbp'-Deflate-Dateien zu nutzbaren "
+        "ELF-Binaries.\n\n"
+        "Einzeldatei:  <input.bin> <output.bin>\n"
+        "Ganzer Ordner:  --recurse <ordner/>  (mit --inplace ersetzen)\n\n"
+        "Für Dateien, die extract_f3s_efs.py mit dem Magic 'iwlyfmbp' "
+        "ausgibt.",
+    "tools/mu_crc_patcher.py":
+        "Rechnet die metainfo2.txt-Prüfsummen eines geänderten "
+        "Firmware-Images neu, damit SWDL es akzeptiert.\n\n"
+        "Aufruf:\n"
+        "  --metainfo <metainfo2.txt> --file <geändertes_image> "
+        "--section '<Abschnittsname>'\n\n"
+        "Mit --dry-run erst anzeigen, was geändert würde. Es gibt KEINE "
+        "kryptografischen Signaturen auf den Images, nur CRC32.",
+    "tools/mu_repack.py":
+        "Komplette Firmware-Pipeline in einem Befehl: entpacken, patchen, "
+        "neu packen, CRC.\n\n"
+        "Interaktiv (Arbeitsordner zum Bearbeiten):\n"
+        "  --mu-archive <datei.tar> --variant 41 --workdir ./work\n\n"
+        "Direkt patchen:\n"
+        "  --mu-archive <datei.tar> --variant 41 "
+        "--replace /usr/apps/MMI3GApplication=./mod --output ./patched/\n\n"
+        "Entweder --mu-archive oder --mu-dir angeben, dazu immer --variant.",
+    "tools/patch_ifs.py":
+        "Ersetzt Dateien in einem dekomprimierten QNX-IFS.\n\n"
+        "1. --list zeigt alle Dateien im IFS.\n"
+        "2. <input_decomp.ifs> <output.ifs> "
+        "--replace <ifs-pfad>=<lokale_datei>  (mehrfach möglich)\n"
+        "3. Danach repack_ifs.py + mu_crc_patcher.py.\n\n"
+        "Beispiel: --replace lsd/lsd.jxe=./modified_lsd.jxe",
+    "tools/prepare_fsc_deploy.py":
+        "Erzeugt die Deploy-Dateien für den FSC-Signatur-Bypass auf eine "
+        "USB-/SD-Karte.\n\n"
+        "Aufruf:  <efs-system.efs> --output <karten-wurzel>\n\n"
+        "Schreibt nur in den Ausgabeordner; am Gerät passiert nichts, bis die "
+        "Karte eingesteckt wird.",
+    "tools/repack_ifs.py":
+        "Komprimiert ein dekomprimiertes QNX-IFS wieder (byte-identisch zu "
+        "Harman möglich).\n\n"
+        "Aufruf:  <input_decomp.ifs> <output_comp.ifs>\n"
+        "Bit-identisch:  --reference <orig_komprimiert.ifs>\n\n"
+        "--chunk-size nicht über 63000 setzen (u16-Überlauf).",
+    "tools/retrofit.py":
+        "Wendet die DrGER2-Korrekturen auf alle Modul-Skripte unter modules/ "
+        "an (platform.sh-Block + mmi_logstamp).\n\n"
+        "Ohne Argumente aufrufen - läuft über den ganzen modules/-Baum.\n\n"
+        "Idempotent: bereits angepasste Dateien werden übersprungen. Nur im "
+        "Quell-Checkout sinnvoll.",
+    "tools/rns850_efs_patcher.py":
+        "RNS-850/MMI3G: 1-Byte-FSC-Bypass direkt im efs-system.efs.\n\n"
+        "  --analyze   Patch-Stellen zeigen (ändert nichts)\n"
+        "  --verify    prüfen, ob schon gepatcht\n"
+        "  --patch     Patch anwenden  (optional -o <ausgabedatei>)\n\n"
+        "Ändert ein Byte in SignatureBlockProcessor.class und korrigiert die "
+        "ZIP-CRCs.",
+    "tools/rns850_fsc_patcher.py":
+        "BouncyCastle-FSC-Signatur-Bypass für VW RNS-850 (Touareg/Phaeton, "
+        "teilt die Plattform mit MMI3G).\n\n"
+        "  <efs-system.efs> --analyze         Patch-Punkt finden\n"
+        "  <efs-system.efs> --extract-class   Klasse extrahieren + patchen\n"
+        "  --output <ordner>                  Zielordner festlegen",
+    "tools/verify_stubs_vs_dsi.py":
+        "Vergleicht die eigenen Per3Reader-Stubs gegen die echten "
+        "Interface-Definitionen in dsi.jar.\n\n"
+        "Aufruf:  <dsi.jar>\n\n"
+        "Zeigt fehlende Methoden an (die zählen - sonst AbstractMethodError "
+        "beim Laden). Braucht 'javap' auf dem PATH (JDK).",
+    "tools/walk_f3s_efs.py":
+        "Listet/durchläuft ein F3S-EFS-Image (unkomprimiert, Variante "
+        "41/51).\n\n"
+        "  <image>                       Standardübersicht\n"
+        "  <image> --format detailed     ausführlich\n"
+        "  --filter <text>               nur passende Namen\n"
+        "  --show <n>                    max. n Einträge",
+    "builder/generate_manifest.py":
+        "Erzeugt docs/app/manifest.json aus dem modules/-Baum für die "
+        "Web-App.\n\n"
+        "Ohne Argumente aufrufen. Nach jeder Modul-Änderung neu laufen "
+        "lassen, damit die Web-App die aktuelle Modulliste zeigt.",
+}
+
+# Zusätzliche, modulspezifische Nutzungshinweise. Fehlt ein Eintrag, wird nur
+# die generische Anleitung aus den module.json-Feldern gezeigt.
+MODULE_HELP = {
+    "google-earth":
+        "Bestätigt funktionierend. Baut eine SD-Karte, die am Auto einen "
+        "lokalen Proxy startet und Satellitenbilder von kh.google.com per "
+        "HTTP nachlädt. Kein PC nötig.",
+    "gem-activator":
+        "Schaltet das Green Engineering Menu (GEM) frei - Grundlage für viele "
+        "andere Module. Standalone, ohne VCDS.",
+    "splash-screen":
+        "Eigenes Boot-Logo. Bild am besten vorher im Tab 'Splash-Screen' zu "
+        "startup_generic.png (800x480) umwandeln, nach splashscreens/ legen, "
+        "dann dieses Modul bauen.",
+    "usb-net":
+        "Universeller ASIX-USB-Ethernet-Treiber für MMI3G+/RNS-850. Ersetzt "
+        "das veraltete 'lte-setup'.",
+    "lte-setup":
+        "VERALTET - stattdessen 'usb-net' verwenden.",
+    "per3-reader":
+        "Installiert ein OSGi-Bundle, das beim MMI-Boot DSI-Persistenzwerte "
+        "ausliest. Nach dem Bauen die SD einstecken und neu starten.",
+    "system-info":
+        "Tiefer Forensik-Dump (Identität, Aktivierungen, Schlüssel, "
+        "Persistenz, Logs) auf die SD. Schreibt nichts in den Flash.",
+    "variant-dump":
+        "Liest Train, MU-Version/Variante, Region, Kernel, HDD-Layout und "
+        "FSC-Status aus. Guter erster Schritt zur Identifikation des Geräts.",
 }
 
 
@@ -231,6 +407,9 @@ class BuilderGUI:
         _cn = f" ({__codename__})" if __codename__ else ""
         root.title(f"MMI3G-Toolkit SD Card Builder  v{__version__}{_cn}")
         root.minsize(820, 640)
+        self._app_icon = None  # keep PhotoImage alive
+        _apply_window_icon(root)
+        self._app_icon = _load_icon_image()
 
         self.modules = {}
         self.selected = set()      # selected module names
@@ -292,6 +471,7 @@ class BuilderGUI:
         win.title("Über MMI3G-Toolkit")
         win.resizable(False, False)
         win.transient(self.root)
+        _apply_window_icon(win)
         frm = ttk.Frame(win, padding=16)
         frm.pack(fill="both", expand=True)
         ttk.Label(frm, text="MMI3G-Toolkit SD Card Builder",
@@ -329,6 +509,37 @@ class BuilderGUI:
         t.configure(yscrollcommand=sc.set)
         t.pack(side="left", fill="both", expand=True)
         sc.pack(side="right", fill="y")
+
+    def _help_window(self, title, text):
+        """Open a standalone, scrollable help/instruction window.
+
+        Used for the per-module and per-tool "Anleitung" buttons so each
+        description + how-to appears in its own window.
+        """
+        win = tk.Toplevel(self.root)
+        win.title(title)
+        win.transient(self.root)
+        _apply_window_icon(win)
+        win.geometry("640x480")
+        head = ttk.Frame(win, padding=(12, 10, 12, 4))
+        head.pack(fill="x")
+        if self._app_icon is not None:
+            tk.Label(head, image=self._app_icon).pack(side="left", padx=(0, 10))
+        ttk.Label(head, text=title, font=("", 13, "bold"),
+                  wraplength=520, justify="left").pack(side="left", anchor="w")
+        ttk.Separator(win, orient="horizontal").pack(fill="x")
+        body = ttk.Frame(win, padding=10)
+        body.pack(fill="both", expand=True)
+        t = tk.Text(body, wrap="word", background="#f6f6f6", relief="flat",
+                    padx=8, pady=8)
+        sc = ttk.Scrollbar(body, command=t.yview)
+        t.configure(yscrollcommand=sc.set)
+        t.insert("1.0", text)
+        t.config(state="disabled")
+        t.pack(side="left", fill="both", expand=True)
+        sc.pack(side="right", fill="y")
+        ttk.Button(win, text="Schließen", command=win.destroy).pack(
+            anchor="e", padx=12, pady=(0, 10))
 
     # ---- top-level layout ------------------------------------------------
 
@@ -425,6 +636,14 @@ class BuilderGUI:
         self.detail = tk.Text(det, height=4, wrap="word", state="disabled",
                               background="#f6f6f6")
         self.detail.pack(fill="x")
+        self._current_module = None
+        self.btn_mod_help = ttk.Button(
+            det, text="Anleitung zu diesem Modul…", state="disabled",
+            command=self._show_module_help)
+        self.btn_mod_help.pack(anchor="w", pady=(6, 0))
+        _Tooltip(self.btn_mod_help,
+                 "Öffnet Beschreibung + Anleitung des gewählten Moduls in "
+                 "einem eigenen Fenster.")
 
         actions = ttk.Frame(t, padding=(8, 0, 8, 8))
         actions.pack(fill="x")
@@ -552,6 +771,8 @@ class BuilderGUI:
 
     def _on_tree_select(self, _event):
         name = self.item_name.get(self.tree.focus())
+        self._current_module = name
+        self.btn_mod_help.config(state=("normal" if name else "disabled"))
         if not name:
             self._show_detail("")
             return
@@ -571,6 +792,66 @@ class BuilderGUI:
         self.detail.delete("1.0", "end")
         self.detail.insert("end", text)
         self.detail.config(state="disabled")
+
+    def _module_help_text(self, name):
+        """Build the per-module description + how-to shown in its own window."""
+        meta = self.modules.get(name, {})
+        lines = []
+        desc = meta.get("description", "").strip()
+        if desc:
+            lines.append("BESCHREIBUNG")
+            lines.append(desc)
+            lines.append("")
+        lines.append("ECKDATEN")
+        lines.append(f"  Status:      {meta.get('status', '?')}")
+        lines.append(f"  Kompatibel:  {', '.join(meta.get('compatible', [])) or '-'}")
+        lines.append(f"  Eigenständig: "
+                     f"{'ja' if meta.get('standalone') else 'nein / Teil einer Kette'}")
+        prereq = meta.get("prereq")
+        if prereq:
+            lines.append(f"  Benötigt zuerst: {prereq}")
+        if meta.get("run_script"):
+            sd = meta.get("script_dir") or ""
+            lines.append(f"  Startskript: {sd}/{meta['run_script']}".replace("//", "/"))
+        scripts = meta.get("scripts")
+        if scripts:
+            lines.append("  Skripte:")
+            for s in scripts:
+                lines.append(f"    - {s}")
+        notes = meta.get("notes")
+        if notes:
+            lines.append("")
+            lines.append("HINWEISE")
+            lines.append(f"  {notes}")
+        extra = MODULE_HELP.get(name)
+        if extra:
+            lines.append("")
+            lines.append("WICHTIG")
+            lines.append(extra)
+        lines.append("")
+        lines.append("ANLEITUNG")
+        if prereq:
+            lines.append(f"1. Erst das Voraussetzungs-Modul '{prereq}' mit "
+                         "wählen (wird beim Bauen automatisch ergänzt).")
+        lines.append(f"{2 if prereq else 1}. Modul links anhaken (☑).")
+        lines.append(f"{3 if prereq else 2}. Ausgabeordner wählen und "
+                     "'Auswahl bauen' klicken.")
+        lines.append(f"{4 if prereq else 3}. Inhalt des Ausgabeordners auf eine "
+                     "FAT32-SD-Karte kopieren.")
+        lines.append(f"{5 if prereq else 4}. SD ins MMI stecken; das Skript "
+                     "läuft automatisch. Log/Ausgabe landet auf der Karte.")
+        if meta.get("installs_to_flash"):
+            lines.append("")
+            lines.append("ACHTUNG: Dieses Modul schreibt in den Flash des "
+                         "Geräts. Vorher 'Deinstall-SD' und ein Backup "
+                         "bereithalten.")
+        return "\n".join(lines)
+
+    def _show_module_help(self):
+        name = self._current_module
+        if not name or name not in self.modules:
+            return
+        self._help_window(f"Modul: {name}", self._module_help_text(name))
 
     def _set_all_visible(self, value: bool):
         for name in self._visible_modules():
@@ -724,6 +1005,11 @@ class BuilderGUI:
                              state="readonly", width=40)
         combo.pack(side="left", padx=6)
         combo.bind("<<ComboboxSelected>>", lambda _e: self._show_tool_doc())
+        bdoc = ttk.Button(row, text="Anleitung öffnen…",
+                          command=self._show_tool_help)
+        bdoc.pack(side="left")
+        _Tooltip(bdoc, "Öffnet Beschreibung + Schritt-für-Schritt-Anleitung "
+                       "des gewählten Werkzeugs in einem eigenen Fenster.")
 
         # Description + instructions panel.
         docframe = ttk.LabelFrame(pad, text="Beschreibung & Anleitung", padding=6)
@@ -795,6 +1081,35 @@ class BuilderGUI:
         self.tool_doc.delete("1.0", "end")
         self.tool_doc.insert("end", "\n\n".join(parts))
         self.tool_doc.config(state="disabled")
+
+    def _tool_help_text(self, label, path):
+        """Build description + how-to + original notes for a firmware tool."""
+        parts = []
+        blurb = TOOL_BLURBS.get(label, "")
+        if blurb:
+            parts.append("BESCHREIBUNG")
+            parts.append(blurb)
+            parts.append("")
+        howto = TOOL_HELP.get(label)
+        if howto:
+            parts.append("ANLEITUNG")
+            parts.append(howto)
+            parts.append("")
+        doc = self._tool_docstring(path)
+        if doc:
+            parts.append("ORIGINAL-HINWEISE (Tool-Docstring)")
+            parts.append(doc)
+            parts.append("")
+        parts.append("Argumente trägst du im Feld 'Argumente:' ein. Pfade mit "
+                     "Leerzeichen in \"...\" setzen. '--help (volle Optionen)' "
+                     "zeigt die komplette Optionsliste im Log.")
+        return "\n".join(parts)
+
+    def _show_tool_help(self):
+        label = self.tool_var.get()
+        path = dict(self.tools).get(label, "")
+        self._help_window(f"Werkzeug: {label}",
+                          self._tool_help_text(label, path))
 
     def _run_tool(self, help_only: bool):
         label = self.tool_var.get()
@@ -1211,6 +1526,46 @@ class BuilderGUI:
         except queue.Empty:
             pass
         self.root.after(80, self._pump_log)
+
+
+def _apply_window_icon(win):
+    """Set the dino window/taskbar icon on a Tk root or Toplevel.
+
+    Tries the .ico (best on Windows for the title bar + taskbar), then falls
+    back to the .png via Pillow. Silently ignores any failure so a missing
+    asset never breaks the GUI.
+    """
+    try:
+        if os.path.isfile(ICON_ICO):
+            win.iconbitmap(ICON_ICO)
+            return
+    except tk.TclError:
+        pass
+    img = _load_icon_image()
+    if img is not None:
+        try:
+            win.iconphoto(True, img)
+        except tk.TclError:
+            pass
+
+
+_ICON_CACHE = {}
+
+
+def _load_icon_image():
+    """Return a cached Tk PhotoImage of the dino icon, or None."""
+    if "img" in _ICON_CACHE:
+        return _ICON_CACHE["img"]
+    img = None
+    try:
+        if _HAVE_PIL and os.path.isfile(ICON_PNG):
+            img = ImageTk.PhotoImage(Image.open(ICON_PNG))
+        elif os.path.isfile(ICON_PNG):
+            img = tk.PhotoImage(file=ICON_PNG)
+    except Exception:  # noqa: BLE001 - icon is optional
+        img = None
+    _ICON_CACHE["img"] = img
+    return img
 
 
 def _draw_dino(c):
