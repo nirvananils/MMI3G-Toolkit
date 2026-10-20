@@ -1,6 +1,11 @@
 __pycache__/
 *.pyc
 
+# PyInstaller .exe build outputs (packaging/build_exe.ps1)
+build/
+dist/
+*.manifest
+
 # per3-reader: intermediate build outputs (jar itself IS tracked)
 modules/per3-reader/build/
 modules/per3-reader/build-jar/

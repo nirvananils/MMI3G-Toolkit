@@ -172,6 +172,43 @@ python builder/build_sd.py --all -o F:\
 
 Or use the **[web app](https://dspl1236.github.io/MMI3G-Toolkit/app/)** — no Python required.
 
+### Desktop GUI
+
+Prefer clicking to typing? A desktop front end wraps the same builder:
+
+```bash
+python builder/gui.py
+```
+
+The GUI is organised into tabs by task:
+
+- **SD-Karte** — modules grouped into category sub-tabs; pick a target
+  platform, tick modules (prerequisites resolved automatically), choose an
+  output folder, and hit **Auswahl bauen**. **Deinstall-SD bauen** produces a
+  removal card.
+- **Firmware-Tools** — run any `tools/*.py` utility with arguments and a
+  `--help` button; each tool shows a description and instructions. Tools run
+  in-process, so this works from the standalone `.exe` too. Optional
+  auto-analysis: point at a firmware folder and the GUI finds the known files
+  (`.ifs`, `.efs`, `lsd.jxe`, `dsi.jar`, …) and runs the matching
+  analysis/extraction tools automatically.
+- **Splash-Screen** — convert any image into an 800×480 `startup_generic.png`
+  with a live preview (needs Pillow: `python -m pip install pillow`).
+- **Release / Git** — show the version, open the changelog, and run the
+  commit / tag / push release workflow.
+
+Tkinter ships with Python on Windows and macOS; on Linux install `python3-tk`.
+
+A standalone Windows **`.exe`** (no Python install needed) is attached to each
+[GitHub release](https://github.com/nirvananils/MMI3G-Toolkit/releases), or
+build it yourself from the repo root:
+
+```powershell
+./packaging/build_exe.ps1
+```
+
+See [docs/RELEASING.md](docs/RELEASING.md) for the versioning and release process.
+
 ### Install to Your Car
 
 1. Copy the contents of `./sdcard/` to your FAT32 SD card root
