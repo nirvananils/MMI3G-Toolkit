@@ -37,6 +37,10 @@ jobs:
             --silent
 
       - uses: actions/configure-pages@v5
+        with:
+          # Auto-create/enable the Pages site if it does not exist yet (e.g.
+          # on a fork where Pages has never been turned on).
+          enablement: true
 
       - name: Stage site
         run: |
