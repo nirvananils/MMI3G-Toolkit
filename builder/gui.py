@@ -26,6 +26,7 @@ import queue
 import subprocess
 import sys
 import threading
+import time
 import traceback
 
 import tkinter as tk
@@ -1598,6 +1599,10 @@ def _draw_dino(c):
     c.create_line(40, 206, 350, 206, fill="#9ccc9c", width=3)
 
 
+# Minimum time the startup splash stays visible, in seconds.
+SPLASH_MIN_S = 2.5
+
+
 def _show_splash(root):
     """Startup splash: dinosaur + heading, auto-closes; click to skip."""
     sp = tk.Toplevel(root)
@@ -1624,6 +1629,25 @@ def _show_splash(root):
     tk.Label(frm, text="(klicken zum Überspringen)", bg=bg, fg="#999",
              font=("", 8)).pack()
     sp.bind("<Button-1>", lambda _e: sp.destroy())
+    # Force the splash to the front: a freshly started process does not
+    # always get the foreground on Windows, and the borderless window has no
+    # taskbar entry to recover it from.
+    sp.deiconify()
+    sp.lift()
+    try:
+        sp.focus_force()
+    except tk.TclError:
+        pass
+    sp.update()
+    if not sp.winfo_ismapped():
+        # Some window managers refuse to map a borderless window; fall back
+        # to a normal decorated one so the dino is still shown.
+        sp.overrideredirect(False)
+        sp.title("MMI3G-Toolkit")
+        _apply_window_icon(sp)
+        sp.deiconify()
+        sp.lift()
+        sp.update()
     return sp
 
 
@@ -1637,8 +1661,16 @@ def main():
         pass
     root.withdraw()
     splash = _show_splash(root)
-    root.update()  # paint the splash before building the main window
-    BuilderGUI(root)
+    shown_at = time.monotonic()
+
+    def _build():
+        BuilderGUI(root)
+        # Building the GUI must not reveal the main window early.
+        root.withdraw()
+        # Keep the splash up for SPLASH_MIN_S after it appeared, however long
+        # the GUI took to build.
+        remaining = SPLASH_MIN_S - (time.monotonic() - shown_at)
+        root.after(max(0, int(remaining * 1000)), _finish)
 
     def _finish():
         if splash.winfo_exists():
@@ -1646,7 +1678,8 @@ def main():
         root.deiconify()
         root.lift()
 
-    root.after(2300, _finish)
+    # Let the event loop paint the splash before the (slower) GUI build.
+    root.after(50, _build)
     root.mainloop()
 
 

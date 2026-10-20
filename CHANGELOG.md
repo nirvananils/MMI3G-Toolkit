@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-20
+
+### Fixed
+- Startup splash ("Viel Spaß mit den Dinosauriern") could fail to appear, so
+  the main window showed right away. The splash is now forced to the front,
+  falls back to a normal window if the borderless one is not mapped, and
+  stays visible for at least 2.5 s. The main window is built after the splash
+  is painted and stays hidden until the splash closes.
+
 ## [1.2.0] - 2026-10-20
 
 ### Changed
@@ -74,7 +83,8 @@ Codename: **Dinosaurier Generation**.
 - Initial public toolkit: 26 modules, Python CLI builder (`build_sd.py`), web
   app, firmware tooling, and research documentation.
 
-[Unreleased]: https://github.com/nirvananils/MMI3G-Toolkit/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/nirvananils/MMI3G-Toolkit/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/nirvananils/MMI3G-Toolkit/releases/tag/v1.2.1
 [1.2.0]: https://github.com/nirvananils/MMI3G-Toolkit/releases/tag/v1.2.0
 [1.1.0]: https://github.com/nirvananils/MMI3G-Toolkit/releases/tag/v1.1.0
 [1.0.0]: https://github.com/nirvananils/MMI3G-Toolkit/releases/tag/v1.0.0

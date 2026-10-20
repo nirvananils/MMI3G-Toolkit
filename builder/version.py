@@ -5,5 +5,5 @@ tag `v<version>` (see docs/RELEASING.md). The release workflow reads the tag,
 the GUI reads __version__ for its title bar, and the .exe is stamped with it.
 """
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 __codename__ = "Dinosaurier Generation"
