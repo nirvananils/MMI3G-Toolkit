@@ -89,7 +89,8 @@ See [docs/SUPPORTED_VEHICLES.md](docs/SUPPORTED_VEHICLES.md) for full details.
 | **variant-dump** | ✅ Tested | Comprehensive per3 adaptation dump — 90+ values to SD |
 | **map-parser** | ✅ Tested | Extract nav database descriptor, FSC activation state, map metadata |
 | **nav-unblocker** | ✅ Ready | Bypass nav database activation (Keldo/DrGER2 method) |
-| **lte-setup** ⚠️ | ✅ Ready | Provision LTE mobile data via USB Ethernet (**requires hardware**) |
+| **usb-net** ⚠️ | ✅ Ready | Universal ASIX USB-Ethernet for MMI3G+/RNS-850 — modern 772B/772C adapters; **supersedes `lte-setup`** (**requires hardware**) |
+| **lte-setup** | 🗑️ Deprecated | Superseded by **`usb-net`** — LTE via USB Ethernet |
 | **can-scanner** | ✅ Ready | CAN bus address scanner — discover RPM, boost, coolant, speed data |
 | **jvm-extract** | ✅ Ready | Extract J9 JVM and UI framework for reverse engineering |
 | **game-loader** | ✅ Ready | Java game launcher — run games on the MMI's J9 JVM |
@@ -104,8 +105,8 @@ See [docs/SUPPORTED_VEHICLES.md](docs/SUPPORTED_VEHICLES.md) for full details.
 | **long-coding** | 🧪 Alpha | Live display of current adaptation values via GEM screens |
 | **per3-reader** ⚠️ | 🧪 Alpha | OSGi DSI persistence bridge. See [research/PER3_READER.md](research/PER3_READER.md) |
 | **per3-writer** | 📐 Design | Persistence write capability (planned) |
-| **can-diag** | ✅ Ready | CAN bus diagnostics — read DTCs, module info, live data |
-| **region-audit** | ✅ Ready | Read-only region check and LSD inspection |
+| **can-diag** | 🧪 Alpha | CAN bus diagnostics via NDR — read DTCs, module info, live data (read-only) |
+| **region-audit** | 📐 Planned | Read-only region / VZE-TSR audit |
 
 > **⚠️ = external tool required.** Every other module is pure software — SD card in, job done.
 
@@ -124,23 +125,25 @@ Reboot the MMI after saving (hold MENU + rotary knob + upper-right soft key for 
 
 ## Hardware Requirements
 
-Most modules run entirely on the MMI itself and need nothing beyond a FAT32 SD card. Two modules are different:
+Most modules run entirely on the MMI itself and need nothing beyond a FAT32 SD card. The exception is `usb-net`:
 
-### lte-setup (to replace the defunct 3G modem)
+### usb-net (to replace the defunct 3G modem)
 
-After the 3G cellular network shutdown (US 2022, EU ongoing), the MMI3G+'s built-in modem is dead. This module reroutes the MMI's network stack through a USB Ethernet adapter to an external LTE router. You'll need:
+After the 3G cellular network shutdown (US 2022, EU ongoing), the MMI3G+'s built-in modem is dead. The `usb-net` module brings up a USB Ethernet adapter on the MMI; in its **`lte` mode** it also sets `DLinkReplacesPPP` so the unit sends online services through that adapter to an external LTE router instead of the dead modem. (This replaces the deprecated `lte-setup` module, whose AX88772B/D overrides never worked on the MMI's io-net stack.) You'll need:
 
 | Part | Specific models | Notes |
 |------|-----------------|-------|
-| **USB Ethernet adapter** | D-Link DUB-E100 rev A4/B1, or Gembird NIC-U1 | Must use the **ASIX AX88772/A/B** chipset — the AX88772D is NOT supported by the QNX driver |
+| **USB Ethernet adapter** | Any **ASIX AX88772 / 772A / 772B / 772C** (e.g. D-Link DUB-E100, Gembird NIC-U1, most cheap current adapters) | `usb-net` ships a universal ASIX driver, so modern 772B/C adapters work. The original AX88172 (USB 1.1) is **not** supported |
 | **AMI-to-USB Type A cable** | Generic AMI/MDI adapter | The MMI has an AMI connector, not a standard USB port |
-| **LTE router** | TP-Link TL-MR3020, Digi WR11 XT, or similar | Any router that serves DHCP on the 192.168.0.x subnet |
+| **LTE router** | TP-Link TL-MR3020, Digi WR11 XT, or similar | Any router that serves DHCP |
 | **LTE SIM** | Any data-only plan | 1–2 GB/month is usually plenty |
 | **DC-DC power** | 12V → 5V converter | For powering the router from the fuse panel |
 
-**Platform compatibility:** MMI 3G+ and RNS-850 only. **MMI 3G High does NOT have the ASIX driver** — don't waste money on hardware for a 3G High unit.
+**Setup:** build a stick with the module in `lte` mode, boot the unit fully, insert the stick, then reboot once for `DLinkReplacesPPP` to take effect. The driver loads from the stick (the read-only firmware is never modified), so re-insert it after each reboot. The other modes are `dhcp` (the default) and `static` (`172.16.42.1`, for a direct cable to a PC), which you can use for telnet access without an LTE router. See [modules/usb-net/README.md](modules/usb-net/README.md).
 
-The module is based on [DrGER2/MMI3GP-LAN-Setup](https://github.com/DrGER2/MMI3GP-LAN-Setup). Total parts cost is typically $100–150. Once configured, you'll get Google Earth overlay, online POI, weather, and other Audi Connect services back via LTE.
+**Platform compatibility:** MMI 3G+ and RNS-850 only. **MMI 3G High does NOT have the ASIX driver**, so don't buy hardware for a 3G High unit. `usb-net` is **beta**: it is validated on a Porsche PCM 3.1 (same QNX io-net driver ABI) and still needs confirmation on an Audi/VW bench unit.
+
+The LTE approach is based on [DrGER2/MMI3GP-LAN-Setup](https://github.com/DrGER2/MMI3GP-LAN-Setup). Total parts cost is typically $100–150. Once configured, online POI, weather, and other connected services can reach the network over LTE. Google Earth also needs the `google-earth` module, because Google's authentication endpoint has been removed (see above).
 
 ## Quick Start
 
@@ -249,7 +252,7 @@ MMI3G-Toolkit/
 │   └── generate_manifest.py     # Web app manifest generator
 ├── core/
 │   ├── copie_scr_plain.sh       # Launcher template (auto-encoded)
-│   ├── platform.sh              # QNX shims, variant detection, logstamp helpers
+│   ├── platform.sh              # QNX shims, variant detection, logstamp + module-completion/timeout helpers
 │   └── uninstall.sh             # Universal uninstaller
 ├── modules/                     # 26 modules
 │   ├── system-info/             # One-shot system state dump to SD
@@ -263,7 +266,7 @@ MMI3G-Toolkit/
 │   ├── map-parser/              # Nav database + FSC state extractor
 │   ├── persistence-dump/        # Persistence data dump
 │   ├── nav-unblocker/           # Nav database activation bypass
-│   ├── lte-setup/               # LTE mobile data provisioning (3G+)
+│   ├── lte-setup/               # LTE via USB Ethernet (deprecated -> usb-net)
 │   ├── can-scanner/             # CAN bus address discovery tool
 │   ├── jvm-extract/             # Extract J9 JVM + UI framework
 │   ├── game-loader/             # Java game launcher for MMI
@@ -271,7 +274,14 @@ MMI3G-Toolkit/
 │   ├── diag-tool/               # UDS diagnostic scanner (alpha)
 │   ├── long-coding/             # Live adaptation values display (GEM)
 │   ├── per3-reader/             # OSGi DSI persistence bridge (alpha)
-│   └── per3-writer/             # Persistence write capability (design)
+│   ├── per3-writer/             # Persistence write capability (design)
+│   ├── usb-net/                 # Universal ASIX USB-Ethernet (supersedes lte-setup)
+│   ├── can-diag/                # CAN bus diagnostics via NDR (read-only, alpha)
+│   ├── dns-refresh-probe/       # One-shot route/DNS diagnostic + resolv.conf refresh
+│   ├── region-audit/            # Read-only region / VZE-TSR audit (planned)
+│   ├── google-earth-gemmi-wrappers/    # Legacy /scripts/GEMMI control wrappers
+│   ├── google-earth-p0824-deploy/      # Deploy bundled EU VW P0824 GEMMI donor payload
+│   └── google-earth-p0824-restore/     # Restore /mnt/nav/gemmi after the P0824 deploy
 ├── research/                    # 35 research documents
 │   ├── ENGINEERING_ACCESS.md          # 36 GEM controllers, 529 strings, full DSI key catalog
 │   ├── ESD_SCREEN_FORMAT.md           # GEM screen definition spec (7 widget types, 173 screens)
@@ -310,6 +320,9 @@ MMI3G-Toolkit/
 └── docs/
     ├── SUPPORTED_VEHICLES.md
     ├── CUSTOM_APPS.md           # Developer guide: 5 ways to run your own code
+    ├── MODULE_HARDENING.md      # Completion-trap/timeout helpers for status-screen modules
+    ├── CAR_TEST_CHECKLIST.md
+    ├── FLASH_RUNBOOK.md
     └── CONTRIBUTING.md
 ```
 
